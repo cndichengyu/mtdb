@@ -39,3 +39,8 @@ jobs:
                   train.n_eval=4 train.n_recall_train=8 train.n_recall_eval=4 \
                   train.ablations=false train.forgetting_stress=false \
                   train.save_model=false train.plot=false
+
+      - name: Active inference smoke
+        run: |
+          python scripts/active_benchmark.py --quick \
+            --out-dir /tmp/mtdb_ci --run-name ci_active

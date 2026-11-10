@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mtdb"
-version = "0.1.0"
-description = "MTDB: a non-Transformer multi-timescale dynamical training base for hybrid AGI prototypes"
+version = "0.2.0"
+description = "MTDB: a non-Transformer multi-timescale dynamical base with active inference for hybrid AGI prototypes"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -21,6 +21,7 @@ keywords = [
   "phase-synchronization",
   "continual-learning",
   "memory",
+  "active-inference",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",

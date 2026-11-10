@@ -9,6 +9,9 @@
 .venv/bin/python scripts/train.py --config configs/standard.yaml --run-name demo_standard
 ```
 
+
+> v0.2 主动推理基准（MTDB 主动 vs Transformer 基线）见 [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md)。
+
 ---
 
 ## 1. 实验设置

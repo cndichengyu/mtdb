@@ -71,6 +71,7 @@ class MemoryConfig:
     novelty_cos: float = 0.92           # skip writes too similar to stored prototype
     wm_novelty_threshold: float = 0.55  # write WM when content is this novel
     attr_novelty_threshold: float = 0.65  # write LTM when no prototype this close
+    sensory_trace_decay: float = 0.8    # decay of the optional sensory evidence trace
     surprise_k: float = 2.0             # write when surprise > mean + k * std
     surprise_floor: float = 1.0
     surprise_ema: float = 0.99
@@ -165,6 +166,7 @@ class ExperimentConfig:
     out_dir: str = "artifacts"
     run_name: str = "demo"
     include_sensory_channel: bool = True
+    include_sensory_trace: bool = False
     dynamics: DynamicsConfig = field(default_factory=DynamicsConfig)
     phase: PhaseConfig = field(default_factory=PhaseConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
@@ -200,7 +202,8 @@ class ExperimentConfig:
         p = self.phase
         m = self.memory
         sensory = 2 * int(input_dim) if self.include_sensory_channel else 0
-        return d.h_dim + 3 * p.n_clusters + m.wm_read_dim + m.attr_read_dim + sensory + 3
+        trace = int(input_dim) if self.include_sensory_trace else 0
+        return d.h_dim + 3 * p.n_clusters + m.wm_read_dim + m.attr_read_dim + sensory + trace + 3
 
     def fingerprint(self) -> str:
         parts = [

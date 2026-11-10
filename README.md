@@ -63,6 +63,36 @@ Full tables, curves, ablations and caveats: **[RESULTS_EN.md](RESULTS_EN.md)** �
 
 ---
 
+## v0.2: active inference — the model chooses what to observe
+
+v0.2 adds a real deliberation loop: before acting, the model **simulates the
+consequences of candidate probes and picks the most informative one** (expected
+free energy), instead of passively predicting the next observation. On an
+8-class active-sensing task with redundant noisy probes, this planning turns into
+a measurable sample-efficiency gain over both the same MTDB base with fixed
+probes and a parameter-matched causal Transformer trained on the same episodes:
+
+| Probe budget | **MTDB active** | MTDB fixed | Transformer passive | Transformer + MTDB probes | Bayes active (oracle) |
+|---:|---:|---:|---:|---:|---:|
+| 3 | **0.605** | 0.430 | 0.315 | 0.495 | 0.765 |
+| 4 | **0.750** | 0.680 | 0.525 | 0.700 | 0.725 |
+| 5 | **0.825** | 0.820 | 0.555 | 0.725 | 0.810 |
+
+![active inference](assets/active_inference.png)
+
+Honest reading: most of the advantage comes from **active evidence acquisition**
+(the Transformer improves a lot when given the same chosen observations), and
+there is still a gap to the exact Bayesian oracle. This is a scoped synthetic
+benchmark, not a universal Transformer-beating or AGI claim. Full protocol,
+numbers and limitations: **[ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md)**.
+
+```bash
+# ~8 s on CPU
+python scripts/active_benchmark.py
+```
+
+---
+
 ## What is inside
 
 | Layer | Code | What it does |
@@ -76,6 +106,8 @@ Full tables, curves, ablations and caveats: **[RESULTS_EN.md](RESULTS_EN.md)** �
 | **Readouts** | [`mtdb/training/readout.py`](mtdb/training/readout.py) | Closed-form ridge and online RLS with Bayesian precision init — **no backprop** |
 | **Training pipeline** | [`mtdb/training/trainer.py`](mtdb/training/trainer.py) | 3-stage training + forgetting stress test + ablations + delayed recall |
 | **Custom data** | [`mtdb/tasks/array.py`](mtdb/tasks/array.py) | Convert your own `[N, T, F]` feature streams into trainer-ready sequences |
+| **Active inference (v0.2)** | [`mtdb/active/`](mtdb/active/) | Expected-free-energy planning over probes; mental-rollout snapshot/restore; active-sensing benchmark |
+| **Transformer baseline** | [`mtdb/baselines/transformer.py`](mtdb/baselines/transformer.py) | Small causal Transformer used only for fair active-sensing comparisons |
 | **Synthetic worlds** | [`mtdb/tasks/synthetic.py`](mtdb/tasks/synthetic.py) | Multimodal prediction/anomaly world and delayed-recall world |
 
 The base itself never uses backpropagation. Only the upper readout is fitted, by
@@ -94,6 +126,7 @@ With the standard preset, the 283-dimensional packet is:
 | `wm` | 48 | working-memory readout |
 | `attractor` | 48 | long-term attractor retrieval |
 | `input` / `delta` | 10 + 10 | current observation and its first difference |
+| `trace` (optional) | F | decaying sensory evidence trace, enabled by `include_sensory_trace=True` |
 | `aux` | 3 | `(surprise, sync, confidence)` |
 
 Consume it in any upper layer:
@@ -231,6 +264,9 @@ computing) is a design target, not a measured result.
 - No language/reasoning/planning; no hardware power/latency measurements.
 - Anomaly detection should use `checkpoint_stage1.pt`; online adaptation changes the
   surprise normalisation statistics (documented in the results).
+- The v0.2 active benchmark is a synthetic 8-class task; the advantage comes
+  mostly from active evidence acquisition, and a Transformer given the same
+  chosen observations closes much of the gap. No universal superiority claim.
 
 See [`ARCHITECTURE_EN.md`](ARCHITECTURE_EN.md) §9 for the full risk list.
 
@@ -238,6 +274,9 @@ See [`ARCHITECTURE_EN.md`](ARCHITECTURE_EN.md) §9 for the full risk list.
 
 ## Roadmap
 
+0. **Done in v0.2**: active-inference loop (probe selection by expected free energy).
+   Next: multi-step particle planning, online probe-table adaptation, calibrated
+   uncertainty, real active-perception streams.
 1. Event-driven / spiking kernels instead of dense ticks.
 2. Close the loop: phase clusters select modules/memory slots/gains.
 3. Trajectory-level STDP replay (not only readout re-fitting).
@@ -254,14 +293,15 @@ mtdb/
 ├── core/          # dynamics, phase, memory, plasticity, consolidation, interface
 ├── training/      # ridge/RLS readouts + 3-stage trainer
 ├── tasks/         # synthetic worlds + custom-array adapter
+├── active/        # v0.2 active inference: environment, agent, planning
 ├── eval/          # metrics and figures
-├── baselines/     # persistence / mean / linear-AR
+├── baselines/     # persistence / mean / linear-AR / small Transformer
 configs/           # debug / standard / mvp presets
-scripts/           # train.py / eval.py
+scripts/           # train.py / eval.py / active_benchmark.py
 examples/          # custom stream example
 tests/             # unit + integration tests (CI)
 assets/            # architecture and result figures
-results/           # committed JSON results from the two demo runs
+results/           # committed JSON results (base demos + active v0.2)
 ```
 
 ---
@@ -273,7 +313,8 @@ pytest tests -q
 ruff check mtdb scripts tests --select F401,F841,F821,E9
 ```
 
-CI runs the test suite plus a 1-epoch smoke train on every push and pull request.
+CI runs the test suite, a 1-epoch smoke train, and a quick active-inference
+benchmark on every push and pull request.
 
 ---
 

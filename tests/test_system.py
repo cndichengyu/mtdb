@@ -55,3 +55,19 @@ def test_memory_disabled_still_has_interface(tiny_cfg):
     sl = system.spec.slices()
     assert out.packet.z[sl["wm"]].abs().sum() == 0
     assert out.packet.z[sl["attractor"]].abs().sum() == 0
+
+
+def test_sensory_trace_and_snapshot(tiny_cfg):
+    tiny_cfg.include_sensory_trace = True
+    system = _make(tiny_cfg)
+    assert system.sensory_trace is not None
+    s1 = torch.ones(10) * 0.1
+    snap = system.snapshot_state(light=True)
+    out1 = system.step(s1, learn=False, allow_memory_write=False)
+    assert float(system.sensory_trace.abs().sum()) > 0
+    sl = system.spec.slices()
+    assert torch.allclose(out1.packet.z[sl["trace"]], system.sensory_trace)
+    z_before = out1.packet.z.clone()
+    system.restore_state(snap)
+    out2 = system.step(s1, learn=False, allow_memory_write=False)
+    assert torch.allclose(out2.packet.z, z_before, atol=1e-6)

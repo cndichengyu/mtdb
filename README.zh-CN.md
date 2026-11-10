@@ -51,6 +51,33 @@
 
 ---
 
+## v0.2：主动推理——模型自己决定"看什么"
+
+v0.2 在底座之上加入真正的 deliberation 循环：行动之前**模拟每个候选探针的两种
+可能结果，按期望后验熵（expected free energy）选择最有信息量的探针**，而不是被动
+预测下一个观测。在"8 类 + 冗余含噪探针"的主动感知任务上，主动规划带来可测量的
+样本效率提升（同参数量 Transformer 基线用同一批训练数据）：
+
+| 探针预算 | **MTDB 主动** | MTDB 固定 | Transformer 被动 | Transformer+主动探针 | 贝叶斯主动（上界） |
+|---:|---:|---:|---:|---:|---:|
+| 3 | **0.605** | 0.430 | 0.315 | 0.495 | 0.765 |
+| 4 | **0.750** | 0.680 | 0.525 | 0.700 | 0.725 |
+| 5 | **0.825** | 0.820 | 0.555 | 0.725 | 0.810 |
+
+![active inference](assets/active_inference.png)
+
+诚实解读：优势主要来自**主动获取证据**（Transformer 拿到同样的主动观测后会大幅
+提升），且距精确贝叶斯上界仍有差距。这是限定范围的合成基准，不是"通用击败
+Transformer"、更不是 AGI 声明。完整协议、数字与局限见
+**[ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md)**（英文）。
+
+```bash
+# CPU 约 8 秒
+python scripts/active_benchmark.py
+```
+
+---
+
 ## 包含什么
 
 | 模块 | 代码 | 作用 |
@@ -64,6 +91,8 @@
 | 读出 | [`mtdb/training/readout.py`](mtdb/training/readout.py) | 闭式 ridge / 在线 RLS（贝叶斯 precision 初始化），**无 backprop** |
 | 训练管线 | [`mtdb/training/trainer.py`](mtdb/training/trainer.py) | 三阶段训练 + 遗忘压力测试 + 消融 + 延迟回忆 |
 | 自定义数据 | [`mtdb/tasks/array.py`](mtdb/tasks/array.py) | 把自己的 `[N,T,F]` 特征流转成训练序列 |
+| 主动推理（v0.2） | [`mtdb/active/`](mtdb/active/) | 期望自由能探针规划、mental rollout 快照、主动感知基准 |
+| Transformer 基线 | [`mtdb/baselines/transformer.py`](mtdb/baselines/transformer.py) | 仅用于主动感知公平对比的小型 causal Transformer |
 | 合成世界 | [`mtdb/tasks/synthetic.py`](mtdb/tasks/synthetic.py) | 多模态预测/异常、延迟回忆任务 |
 
 底座的动力学与记忆**不使用反向传播**，只有上层读出用最小二乘 / RLS 拟合。
@@ -156,7 +185,9 @@ trainer.run()
 - 工作记忆只在更长延迟（96 步）才明显优于冻结写入；
 - 睡眠巩固主要发生在读出层，循环突触只做剪枝/重归一，没有轨迹级 STDP 回放；
 - 没有语言/推理/规划，也没有硬件功耗/延迟实测；
-- 异常检测应使用 `checkpoint_stage1.pt`（在线适应会改写 surprise 统计）。
+- 异常检测应使用 `checkpoint_stage1.pt`（在线适应会改写 surprise 统计）；
+- v0.2 主动基准是 8 类合成任务，优势主要来自主动获取证据；Transformer 拿到同样
+  主动观测后会追回大部分差距，不构成通用"击败 Transformer"结论。
 
 详见 [ARCHITECTURE.md](ARCHITECTURE.md)（[English](ARCHITECTURE_EN.md)）第 9 节。
 
@@ -164,6 +195,8 @@ trainer.run()
 
 ## 路线图
 
+0. **v0.2 已完成**：主动推理层（按 expected free energy 选择探针）。下一步：
+   多步粒子规划、在线探针表适应、不确定性校准、真实主动感知数据；
 1. 事件驱动/脉冲 kernel，替代密集 tick；
 2. 相位簇闭环选择模块/记忆槽/增益；
 3. 轨迹级 STDP 回放；

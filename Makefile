@@ -1,6 +1,6 @@
 PYTHON ?= .venv/bin/python
 
-.PHONY: help install test lint debug standard eval clean
+.PHONY: help install test lint debug standard active eval clean
 
 help:
 	@echo "install  - create venv and install requirements"
@@ -8,6 +8,7 @@ help:
 	@echo "lint     - ruff real-error check"
 	@echo "debug    - 1-minute debug experiment"
 	@echo "standard - full standard experiment (CPU ~4 min)"
+	@echo "active   - v0.2 active-inference benchmark (~8 s)"
 	@echo "eval     - evaluate the standard checkpoint"
 
 install:
@@ -25,6 +26,9 @@ debug:
 
 standard:
 	$(PYTHON) scripts/train.py --config configs/standard.yaml --run-name demo_standard
+
+active:
+	$(PYTHON) scripts/active_benchmark.py
 
 eval:
 	$(PYTHON) scripts/eval.py --checkpoint artifacts/demo_standard/checkpoint.pt

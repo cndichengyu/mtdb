@@ -11,6 +11,9 @@ with the command:
 .venv/bin/python scripts/train.py --config configs/standard.yaml --run-name demo_standard
 ```
 
+
+> The v0.2 active-inference benchmark (MTDB active vs Transformer baselines) is in [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md).
+
 ---
 
 ## 1. Experimental Setup

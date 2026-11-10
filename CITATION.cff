@@ -4,7 +4,7 @@ message: "If you use this software or build on the architecture, please cite the
 type: software
 authors:
   - name: "cndichengyu"
-version: 0.1.0
+version: 0.2.0
 date-released: "2026-11-09"
 url: "https://github.com/cndichengyu/mtdb"
 repository-code: "https://github.com/cndichengyu/mtdb"
@@ -18,8 +18,11 @@ keywords:
   - predictive coding
   - phase synchronization
   - continual learning
+  - active inference
 abstract: >-
   A non-Transformer training substrate for the sensorimotor-intuition-memory
   layer of hybrid AGI systems: multi-timescale sparse dynamics, Kuramoto phase
   routing, working/attractor memory, three-factor local plasticity, sleep
-  replay consolidation and a compressed interface for upper-layer world models.
+  replay consolidation, a compressed interface for upper-layer world models,
+  and an active-inference layer that chooses its own observations by expected
+  free energy rather than passively predicting the next token.

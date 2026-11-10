@@ -100,6 +100,7 @@ class MTDBSystem:
             n_clusters=cfg.phase.n_clusters,
             input_dim=self.input_dim,
             include_sensory=bool(cfg.include_sensory_channel),
+            include_sensory_trace=bool(cfg.include_sensory_trace),
         )
         self.self_pred = RLSReadout(
             in_dim=cfg.dynamics.h_dim + self.phase_dim,
@@ -119,6 +120,10 @@ class MTDBSystem:
         self._prev_base: Optional[torch.Tensor] = None
         self._prev_pred: Optional[torch.Tensor] = None
         self._prev_s: Optional[torch.Tensor] = None
+        self.sensory_trace: Optional[torch.Tensor] = (
+            torch.zeros(self.input_dim, device=self.device)
+            if cfg.include_sensory_trace else None
+        )
         self._last: Optional[StepOutput] = None
         self._write_cooldown = 0
         self.step_count = 0
@@ -131,6 +136,69 @@ class MTDBSystem:
         self._prev_base = None
         self._prev_pred = None
         self._prev_s = None
+        if self.sensory_trace is not None:
+            self.sensory_trace.zero_()
+
+    # --------------------------------------------------------- state snapshots
+    def snapshot_state(self, light: bool = False) -> Dict[str, object]:
+        """Cheap snapshot used by active inference / mental rollouts.
+
+        Memory contents are included because even a read-only simulated step can
+        change working-memory usage statistics. Restoring a snapshot must leave
+        the real system bit-identical.
+        """
+        snap: Dict[str, object] = {
+            "x": self.dynamics.x.detach().clone(),
+            "theta": self.phase.theta.detach().clone(),
+            "prev_s": self._prev_s.detach().clone() if self._prev_s is not None else None,
+            "prev_base": (
+                self._prev_base.detach().clone() if self._prev_base is not None else None
+            ),
+            "prev_pred": (
+                self._prev_pred.detach().clone() if self._prev_pred is not None else None
+            ),
+            "write_cooldown": int(self._write_cooldown),
+            "step_count": int(self.step_count),
+            "sensory_trace": (
+                self.sensory_trace.detach().clone()
+                if self.sensory_trace is not None else None
+            ),
+        }
+        if self.wm is not None:
+            if light:
+                # read-only rollouts only mutate the usage statistics
+                snap["wm_usage"] = self.wm.usage.detach().clone()
+            else:
+                snap["wm"] = {k: v.clone() for k, v in self.wm.state_dict().items()}
+        if self.attractor is not None and not light:
+            snap["attractor"] = {
+                k: v.clone() for k, v in self.attractor.state_dict().items()
+            }
+        return snap
+
+    def restore_state(self, snap: Dict[str, object]) -> None:
+        self.dynamics.x = snap["x"].clone()
+        self.phase.theta = snap["theta"].clone()
+        self._prev_s = (
+            snap["prev_s"].clone() if snap["prev_s"] is not None else None
+        )
+        self._prev_base = (
+            snap["prev_base"].clone() if snap["prev_base"] is not None else None
+        )
+        self._prev_pred = (
+            snap["prev_pred"].clone() if snap["prev_pred"] is not None else None
+        )
+        self._write_cooldown = int(snap["write_cooldown"])
+        self.step_count = int(snap["step_count"])
+        if snap["sensory_trace"] is not None and self.sensory_trace is not None:
+            self.sensory_trace = snap["sensory_trace"].clone()
+        if self.wm is not None:
+            if "wm" in snap:
+                self.wm.load_state_dict(snap["wm"])
+            elif "wm_usage" in snap:
+                self.wm.usage = snap["wm_usage"].detach().clone()
+        if self.attractor is not None and "attractor" in snap:
+            self.attractor.load_state_dict(snap["attractor"])
 
     # ------------------------------------------------------------------- step
     @torch.no_grad()
@@ -223,10 +291,14 @@ class MTDBSystem:
         )
         confidence = 1.0 / (1.0 + surprise)
 
+        if self.sensory_trace is not None:
+            decay = float(self.cfg.memory.sensory_trace_decay)
+            self.sensory_trace.mul_(decay).add_(s)
+
         z = pack_interface(
             self.spec, h, phase_feat, wm_proj, attr_proj,
             surprise=surprise, sync=sync, confidence=confidence,
-            s=s, prev_s=self._prev_s,
+            s=s, prev_s=self._prev_s, trace=self.sensory_trace,
         )
         self._prev_s = s.detach().clone()
         spike_fraction = float(
@@ -242,6 +314,10 @@ class MTDBSystem:
             sync=sync,
             confidence=confidence,
             cluster_membership=cluster_ids,
+            sensory_trace=(
+                self.sensory_trace.detach().clone()
+                if self.sensory_trace is not None else None
+            ),
             memory_key=memory_key if memory_key >= 0 else None,
             wrote_memory=wm_write or attr_write,
             metadata={
@@ -341,6 +417,10 @@ class MTDBSystem:
             "upper_dim": self.upper_dim,
             "step_count": self.step_count,
             "write_cooldown": self._write_cooldown,
+            "sensory_trace": (
+                self.sensory_trace.detach().cpu()
+                if self.sensory_trace is not None else None
+            ),
         }
         if self.wm is not None:
             state["wm"] = self.wm.state_dict()
@@ -358,6 +438,8 @@ class MTDBSystem:
         self.attr_proj = SparseProjection.from_state_dict(state["attr_proj"]).to(self.device)
         self.step_count = int(state.get("step_count", 0))
         self._write_cooldown = int(state.get("write_cooldown", 0))
+        if state.get("sensory_trace") is not None and self.sensory_trace is not None:
+            self.sensory_trace = state["sensory_trace"].to(self.device)
         if self.wm is not None and "wm" in state:
             self.wm.load_state_dict(state["wm"])
         if self.attractor is not None and "attractor" in state:

@@ -1,0 +1,132 @@
+{
+  "config": {
+    "units": 768,
+    "in_degree": 16,
+    "h_dim": 96,
+    "include_sensory_trace": true,
+    "train_episodes": 600,
+    "eval_episodes": 200,
+    "passes": 3,
+    "transformer_epochs": 60,
+    "noise": 0.1,
+    "seed": 0
+  },
+  "params": {
+    "mtdb": 69216,
+    "transformer": 69832
+  },
+  "train_time_s": 4.630736827850342,
+  "rows": [
+    {
+      "budget": 1,
+      "mtdb_fixed": 0.275,
+      "mtdb_random": 0.2,
+      "mtdb_active": 0.21,
+      "transformer_passive": 0.23,
+      "transformer_random": 0.26,
+      "transformer_active_queries": 0.235,
+      "bayes_active": 0.205,
+      "bayes_fixed": 0.225,
+      "mean_active_queries": 1.0,
+      "active_query_histogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        200,
+        0,
+        0
+      ]
+    },
+    {
+      "budget": 2,
+      "mtdb_fixed": 0.2,
+      "mtdb_random": 0.3,
+      "mtdb_active": 0.39,
+      "transformer_passive": 0.195,
+      "transformer_random": 0.395,
+      "transformer_active_queries": 0.43,
+      "bayes_active": 0.435,
+      "bayes_fixed": 0.255,
+      "mean_active_queries": 2.0,
+      "active_query_histogram": [
+        72,
+        0,
+        18,
+        10,
+        13,
+        200,
+        40,
+        47
+      ]
+    },
+    {
+      "budget": 3,
+      "mtdb_fixed": 0.43,
+      "mtdb_random": 0.585,
+      "mtdb_active": 0.605,
+      "transformer_passive": 0.315,
+      "transformer_random": 0.485,
+      "transformer_active_queries": 0.495,
+      "bayes_active": 0.765,
+      "bayes_fixed": 0.42,
+      "mean_active_queries": 3.0,
+      "active_query_histogram": [
+        79,
+        0,
+        26,
+        72,
+        46,
+        200,
+        72,
+        105
+      ]
+    },
+    {
+      "budget": 4,
+      "mtdb_fixed": 0.68,
+      "mtdb_random": 0.66,
+      "mtdb_active": 0.75,
+      "transformer_passive": 0.525,
+      "transformer_random": 0.52,
+      "transformer_active_queries": 0.7,
+      "bayes_active": 0.725,
+      "bayes_fixed": 0.74,
+      "mean_active_queries": 4.0,
+      "active_query_histogram": [
+        118,
+        0,
+        89,
+        86,
+        100,
+        200,
+        106,
+        101
+      ]
+    },
+    {
+      "budget": 5,
+      "mtdb_fixed": 0.82,
+      "mtdb_random": 0.7,
+      "mtdb_active": 0.825,
+      "transformer_passive": 0.555,
+      "transformer_random": 0.59,
+      "transformer_active_queries": 0.725,
+      "bayes_active": 0.81,
+      "bayes_fixed": 0.82,
+      "mean_active_queries": 5.0,
+      "active_query_histogram": [
+        154,
+        0,
+        117,
+        110,
+        142,
+        200,
+        139,
+        138
+      ]
+    }
+  ],
+  "note": "Synthetic 8-class active sensing. 'transformer_active_queries' is the Transformer classifier evaluated on the MTDB-selected probe sequences; it isolates evidence acquisition from classifier capacity. This is a scoped benchmark, not a universal Transformer-vs-MTDB claim."
+}

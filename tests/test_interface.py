@@ -51,3 +51,20 @@ def test_interface_mismatch_raises():
     with pytest.raises(ValueError):
         pack_interface(spec, torch.zeros(7), torch.zeros(6), torch.zeros(4),
                        torch.zeros(4), 0.0, 0.0, 0.0)
+
+
+def test_interface_with_sensory_trace():
+    spec = InterfaceSpec(
+        h_dim=8, phase_dim=6, wm_dim=4, attr_dim=4, n_clusters=2,
+        input_dim=5, include_sensory=True, include_sensory_trace=True,
+    )
+    sl = spec.slices()
+    assert sl["trace"] == slice(32, 37)
+    assert sl["aux"] == slice(37, 40)
+    s = torch.arange(5, dtype=torch.float32)
+    z = pack_interface(
+        spec, torch.zeros(8), torch.zeros(6), torch.zeros(4), torch.zeros(4),
+        0.0, 0.0, 1.0, s=s, prev_s=s, trace=s * 2,
+    )
+    assert z.shape == (spec.total_dim,)
+    assert z[sl["trace"]].tolist() == [0.0, 2.0, 4.0, 6.0, 8.0]
