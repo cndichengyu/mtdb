@@ -2,6 +2,8 @@
 
 # MTDB Architecture and Implementation Notes
 
+**English** | [中文](ARCHITECTURE.md)
+
 > MTDB = **M**ulti-**T**imescale **D**ynamical **B**ase (multi-timescale dynamical base).
 > This document explains how the conceptual architecture maps onto the code in this repository:
 > the formulas, implementation locations, interfaces, training protocol, complexity, and
@@ -379,7 +381,7 @@ uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python -m pytest tests -q
 
 # Re-evaluate from a checkpoint
-.venv/bin/python scripts/eval.py --checkpoint results/demo_standard/checkpoint.pt
+.venv/bin/python scripts/eval.py --checkpoint artifacts/demo_standard/checkpoint.pt
 ```
 
 ## Appendix B: Key Hyperparameters

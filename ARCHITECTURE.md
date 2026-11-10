@@ -317,7 +317,7 @@ W_ij  ← clip_per_step( W_ij + ΔW_ij ) − wd·W_ij
 - 在线适应（保守遗忘）使 A/B 同时改善；压力测试中激进遗忘造成明显 A 遗忘，
   睡眠回放后 A/B 均显著恢复。
 
-（具体数字以 `artifacts/demo_standard/results.json` 为准，README/RESULTS 中同步。）
+（具体数字以 `results/demo_standard/results.json` 为准，README/RESULTS 中同步。）
 
 ---
 
