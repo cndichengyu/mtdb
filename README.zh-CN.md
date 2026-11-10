@@ -107,7 +107,8 @@ python scripts/train.py --config configs/standard.yaml --data data/my_stream.npz
 ```
 
 特征只用训练集统计量做 z-score；目标自动取 `x[t + horizon]`；输入维度自动推断。
-也可以直接调 API：
+注意睡眠回放按整条序列存储：序列长度最好 ≥ `consolidation.window_len`
+（debug 96、standard 128），短序列可调小该配置。也可以直接调 API：
 
 ```python
 from mtdb.config import ExperimentConfig

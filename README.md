@@ -153,8 +153,9 @@ python scripts/train.py --config configs/standard.yaml --data data/my_stream.npz
 ```
 
 Features are z-scored using training-split statistics only; targets are derived as
-`x[t + horizon]`. The input dimension is inferred automatically. You can also call the
-API directly:
+`x[t + horizon]`. The input dimension is inferred automatically. For sleep replay,
+make sequences at least `consolidation.window_len` ticks long (96 in `debug`, 128 in
+`standard`), or lower that config value. You can also call the API directly:
 
 ```python
 from mtdb.config import ExperimentConfig

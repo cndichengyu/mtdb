@@ -27,6 +27,11 @@ Optional keys:
 
 Features are z-scored using *training-split statistics only* (no leakage) and
 clipped to ±8; targets are computed after normalisation.
+
+Note: sleep replay stores whole sequences, so each sequence should be at least
+``consolidation.window_len`` ticks long (96 ticks in the debug preset, 128 in
+the standard preset). Shorter sequences still train, but sleep replay will have
+no windows to store. Lower ``consolidation.window_len`` for short streams.
 """
 
 from __future__ import annotations
