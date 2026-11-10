@@ -1,0 +1,19 @@
+# virtualenv / caches
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# training runs and model weights (large, regenerate locally)
+artifacts/
+*.pt
+*.pth
+data/
+*.npz
+
+# keep the published example results and figures
+!results/
+!assets/

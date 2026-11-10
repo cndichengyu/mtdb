@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mtdb"
+version = "0.1.0"
+description = "MTDB: a non-Transformer multi-timescale dynamical training base for hybrid AGI prototypes"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "cndichengyu" }]
+keywords = [
+  "agi",
+  "multi-timescale-dynamics",
+  "reservoir-computing",
+  "neuromorphic-computing",
+  "local-learning",
+  "predictive-coding",
+  "phase-synchronization",
+  "continual-learning",
+  "memory",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "torch>=2.5",
+  "numpy>=2.0",
+  "PyYAML>=6.0",
+  "matplotlib>=3.8",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/cndichengyu/mtdb"
+Repository = "https://github.com/cndichengyu/mtdb"
+Issues = "https://github.com/cndichengyu/mtdb/issues"
+Documentation = "https://github.com/cndichengyu/mtdb/blob/main/ARCHITECTURE_EN.md"
+Changelog = "https://github.com/cndichengyu/mtdb/releases"
+
+[tool.setuptools.packages.find]
+include = ["mtdb*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "E9"]

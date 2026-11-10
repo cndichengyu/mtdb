@@ -1,0 +1,108 @@
+# MTDB MVP-scale preset: aims at the "10^4-10^5 units, laptop/GPU" regime.
+# This is the configuration the paper-style prototype would scale to; it is
+# intentionally NOT run by the shipped demo (see configs/standard.yaml).
+seed: 0
+device: auto
+out_dir: artifacts
+run_name: mvp
+
+dynamics:
+  n_units: 16384
+  in_degree: 32
+  tau_groups_ms: [10.0, 100.0, 1000.0]
+  group_probs: [0.5, 0.3, 0.2]
+  dt_ms: 10.0
+  target_spectral_radius: 1.0
+  noise_std: 0.01
+  homeostatic_lr: 0.002
+  target_rate: 0.12
+  spike_threshold: 0.25
+  row_norm_cap: 2.0
+  h_dim: 256
+  projection_fan_in: 48
+  excitatory_fraction: 0.8
+
+phase:
+  enabled: true
+  freq_hz_by_group: [8.0, 6.0, 4.0]
+  freq_jitter_hz: 0.5
+  coupling_gain: 0.4
+  input_gain: 1.5
+  phase_noise: 0.05
+  n_clusters: 16
+
+memory:
+  enabled: true
+  wm_slots: 128
+  wm_read_dim: 64
+  wm_beta: 12.0
+  wm_usage_decay: 0.999
+  attr_capacity: 4096
+  attr_read_dim: 64
+  attr_topk: 16
+  attr_beta: 8.0
+  novelty_cos: 0.92
+  surprise_k: 2.0
+  surprise_floor: 1.0
+  surprise_ema: 0.99
+  write_cooldown: 2
+
+plasticity:
+  enabled: true
+  lr_hebb: 1.0e-4
+  lr_error: 4.0e-4
+  lr_reward: 1.0e-4
+  eligibility_decay: 0.95
+  weight_decay: 1.0e-6
+  max_step: 5.0e-3
+  row_norm_cap: 2.0
+  modulation_gain: 1.0
+
+consolidation:
+  enabled: true
+  buffer_size: 256
+  window_len: 256
+  replay_passes: 2
+  prune_fraction: 0.01
+  renorm: true
+  retrieval_samples: 128
+  retrieval_noise: 0.35
+  readout_refit: true
+
+readout:
+  kind: ridge
+  ridge_lambda: 0.05
+  rls_forget: 0.9999
+  rls_init_delta: 100.0
+
+train:
+  seq_len: 256
+  n_train: 128
+  n_eval: 32
+  epochs: 6
+  horizon: 5
+  online_epochs: 4
+  replay_stride: 128
+  run_stage2: true
+  run_recall: true
+  n_recall_train: 256
+  n_recall_eval: 64
+  forgetting_stress: false
+  stress_rls_forget: 0.999
+  stress_online_epochs: 2
+  ablations: false
+  ablation_n_train: 64
+  ablation_epochs: 2
+  plot: true
+  save_model: true
+
+task:
+  anomaly_rate: 0.02
+  anomaly_window: 3
+  recall_classes: 8
+  recall_delay: 64
+  recall_eval_delays: [32, 64, 128, 192]
+  recall_cue_len: 4
+  recall_distractors: 3
+  seed_train: 1234
+  seed_eval: 5678

@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+title: "MTDB: Multi-Timescale Dynamical Base"
+message: "If you use this software or build on the architecture, please cite the repository."
+type: software
+authors:
+  - name: "cndichengyu"
+version: 0.1.0
+date-released: "2026-11-09"
+url: "https://github.com/cndichengyu/mtdb"
+repository-code: "https://github.com/cndichengyu/mtdb"
+license: MIT
+keywords:
+  - AGI
+  - multi-timescale dynamics
+  - reservoir computing
+  - neuromorphic computing
+  - local learning
+  - predictive coding
+  - phase synchronization
+  - continual learning
+abstract: >-
+  A non-Transformer training substrate for the sensorimotor-intuition-memory
+  layer of hybrid AGI systems: multi-timescale sparse dynamics, Kuramoto phase
+  routing, working/attractor memory, three-factor local plasticity, sleep
+  replay consolidation and a compressed interface for upper-layer world models.
