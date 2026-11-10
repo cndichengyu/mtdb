@@ -1,0 +1,600 @@
+{
+  "protocol": {
+    "task": "8-class active sensing",
+    "noise": 0.1,
+    "train_episodes": 600,
+    "eval_episodes": 100,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "budgets": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "depth2_particles": 12,
+    "drift": {
+      "switch_step": 3,
+      "queries": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "noise": 0.4,
+      "budgets": [
+        6,
+        8
+      ]
+    }
+  },
+  "params": {
+    "mtdb": 69216,
+    "transformer": 69832
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "params": {
+        "mtdb": 69216,
+        "transformer": 69832
+      },
+      "calibration": {
+        "before": {
+          "nll": 1.8590264320373535,
+          "ece": 0.5779235714673996,
+          "accuracy": 0.74,
+          "temperature": 1.0
+        },
+        "after": {
+          "nll": 1.6624375581741333,
+          "ece": 0.5342593842744827,
+          "accuracy": 0.74,
+          "temperature": 0.5,
+          "coverage": 0.88,
+          "avg_set_size": 2.16
+        },
+        "temperature": 0.5,
+        "conformal_q": 0.8585781916975975
+      },
+      "stationary": [
+        {
+          "budget": 2,
+          "mtdb_fixed": 0.27,
+          "mtdb_random": 0.37,
+          "mtdb_active_d1": 0.44,
+          "mtdb_active_d2": 0.35,
+          "transformer_passive": 0.18,
+          "transformer_active_d2": 0.47,
+          "transformer_on_mtdb_active": 0.35,
+          "bayes_active": 0.43,
+          "mtdb_active_d2_queries": 2.0
+        },
+        {
+          "budget": 3,
+          "mtdb_fixed": 0.37,
+          "mtdb_random": 0.59,
+          "mtdb_active_d1": 0.59,
+          "mtdb_active_d2": 0.53,
+          "transformer_passive": 0.36,
+          "transformer_active_d2": 0.42,
+          "transformer_on_mtdb_active": 0.46,
+          "bayes_active": 0.77,
+          "mtdb_active_d2_queries": 3.0
+        },
+        {
+          "budget": 4,
+          "mtdb_fixed": 0.7,
+          "mtdb_random": 0.57,
+          "mtdb_active_d1": 0.71,
+          "mtdb_active_d2": 0.72,
+          "transformer_passive": 0.61,
+          "transformer_active_d2": 0.55,
+          "transformer_on_mtdb_active": 0.61,
+          "bayes_active": 0.74,
+          "mtdb_active_d2_queries": 4.0
+        },
+        {
+          "budget": 5,
+          "mtdb_fixed": 0.82,
+          "mtdb_random": 0.67,
+          "mtdb_active_d1": 0.76,
+          "mtdb_active_d2": 0.62,
+          "transformer_passive": 0.74,
+          "transformer_active_d2": 0.68,
+          "transformer_on_mtdb_active": 0.51,
+          "bayes_active": 0.87,
+          "mtdb_active_d2_queries": 5.0
+        }
+      ],
+      "drift": [
+        {
+          "budget": 6,
+          "mtdb_static_noise": 0.67,
+          "mtdb_adaptive_noise": 0.27,
+          "transformer_active": 0.62,
+          "noise_mean_after": 0.4768741533818255
+        },
+        {
+          "budget": 8,
+          "mtdb_static_noise": 0.69,
+          "mtdb_adaptive_noise": 0.29,
+          "transformer_active": 0.56,
+          "noise_mean_after": 0.4577620571342349
+        }
+      ],
+      "time_s": 23.705214977264404
+    },
+    {
+      "seed": 1,
+      "params": {
+        "mtdb": 69216,
+        "transformer": 69832
+      },
+      "calibration": {
+        "before": {
+          "nll": 1.8557742834091187,
+          "ece": 0.47758102357387544,
+          "accuracy": 0.64,
+          "temperature": 1.0
+        },
+        "after": {
+          "nll": 1.6570196151733398,
+          "ece": 0.4333746761083603,
+          "accuracy": 0.64,
+          "temperature": 0.5,
+          "coverage": 0.89,
+          "avg_set_size": 1.76
+        },
+        "temperature": 0.5,
+        "conformal_q": 0.8477445840835571
+      },
+      "stationary": [
+        {
+          "budget": 2,
+          "mtdb_fixed": 0.18,
+          "mtdb_random": 0.38,
+          "mtdb_active_d1": 0.38,
+          "mtdb_active_d2": 0.32,
+          "transformer_passive": 0.18,
+          "transformer_active_d2": 0.38,
+          "transformer_on_mtdb_active": 0.44,
+          "bayes_active": 0.44,
+          "mtdb_active_d2_queries": 2.0
+        },
+        {
+          "budget": 3,
+          "mtdb_fixed": 0.41,
+          "mtdb_random": 0.6,
+          "mtdb_active_d1": 0.62,
+          "mtdb_active_d2": 0.56,
+          "transformer_passive": 0.34,
+          "transformer_active_d2": 0.5,
+          "transformer_on_mtdb_active": 0.45,
+          "bayes_active": 0.68,
+          "mtdb_active_d2_queries": 3.0
+        },
+        {
+          "budget": 4,
+          "mtdb_fixed": 0.81,
+          "mtdb_random": 0.68,
+          "mtdb_active_d1": 0.61,
+          "mtdb_active_d2": 0.65,
+          "transformer_passive": 0.57,
+          "transformer_active_d2": 0.66,
+          "transformer_on_mtdb_active": 0.52,
+          "bayes_active": 0.74,
+          "mtdb_active_d2_queries": 4.0
+        },
+        {
+          "budget": 5,
+          "mtdb_fixed": 0.77,
+          "mtdb_random": 0.68,
+          "mtdb_active_d1": 0.72,
+          "mtdb_active_d2": 0.78,
+          "transformer_passive": 0.48,
+          "transformer_active_d2": 0.64,
+          "transformer_on_mtdb_active": 0.62,
+          "bayes_active": 0.72,
+          "mtdb_active_d2_queries": 5.0
+        }
+      ],
+      "drift": [
+        {
+          "budget": 6,
+          "mtdb_static_noise": 0.68,
+          "mtdb_adaptive_noise": 0.39,
+          "transformer_active": 0.74,
+          "noise_mean_after": 0.46394586177555164
+        },
+        {
+          "budget": 8,
+          "mtdb_static_noise": 0.66,
+          "mtdb_adaptive_noise": 0.28,
+          "transformer_active": 0.65,
+          "noise_mean_after": 0.4621796904291011
+        }
+      ],
+      "time_s": 23.183045148849487
+    },
+    {
+      "seed": 2,
+      "params": {
+        "mtdb": 69216,
+        "transformer": 69832
+      },
+      "calibration": {
+        "before": {
+          "nll": 1.8411812782287598,
+          "ece": 0.5865262150764465,
+          "accuracy": 0.75,
+          "temperature": 1.0
+        },
+        "after": {
+          "nll": 1.6283884048461914,
+          "ece": 0.5410012221336364,
+          "accuracy": 0.75,
+          "temperature": 0.5,
+          "coverage": 0.94,
+          "avg_set_size": 1.97
+        },
+        "temperature": 0.5,
+        "conformal_q": 0.8509187698364258
+      },
+      "stationary": [
+        {
+          "budget": 2,
+          "mtdb_fixed": 0.24,
+          "mtdb_random": 0.35,
+          "mtdb_active_d1": 0.47,
+          "mtdb_active_d2": 0.39,
+          "transformer_passive": 0.22,
+          "transformer_active_d2": 0.32,
+          "transformer_on_mtdb_active": 0.39,
+          "bayes_active": 0.36,
+          "mtdb_active_d2_queries": 2.0
+        },
+        {
+          "budget": 3,
+          "mtdb_fixed": 0.41,
+          "mtdb_random": 0.55,
+          "mtdb_active_d1": 0.69,
+          "mtdb_active_d2": 0.46,
+          "transformer_passive": 0.41,
+          "transformer_active_d2": 0.43,
+          "transformer_on_mtdb_active": 0.54,
+          "bayes_active": 0.75,
+          "mtdb_active_d2_queries": 3.0
+        },
+        {
+          "budget": 4,
+          "mtdb_fixed": 0.68,
+          "mtdb_random": 0.62,
+          "mtdb_active_d1": 0.69,
+          "mtdb_active_d2": 0.68,
+          "transformer_passive": 0.64,
+          "transformer_active_d2": 0.66,
+          "transformer_on_mtdb_active": 0.49,
+          "bayes_active": 0.7,
+          "mtdb_active_d2_queries": 4.0
+        },
+        {
+          "budget": 5,
+          "mtdb_fixed": 0.79,
+          "mtdb_random": 0.72,
+          "mtdb_active_d1": 0.85,
+          "mtdb_active_d2": 0.64,
+          "transformer_passive": 0.59,
+          "transformer_active_d2": 0.63,
+          "transformer_on_mtdb_active": 0.58,
+          "bayes_active": 0.75,
+          "mtdb_active_d2_queries": 5.0
+        }
+      ],
+      "drift": [
+        {
+          "budget": 6,
+          "mtdb_static_noise": 0.66,
+          "mtdb_adaptive_noise": 0.39,
+          "transformer_active": 0.67,
+          "noise_mean_after": 0.46809723724864627
+        },
+        {
+          "budget": 8,
+          "mtdb_static_noise": 0.78,
+          "mtdb_adaptive_noise": 0.3,
+          "transformer_active": 0.6,
+          "noise_mean_after": 0.4875338231867296
+        }
+      ],
+      "time_s": 23.404152870178223
+    }
+  ],
+  "aggregate": {
+    "stationary": {
+      "2": {
+        "mtdb_fixed": {
+          "mean": 0.22999999999999998,
+          "std": 0.045825756949558406,
+          "ci95": 0.11384667891510936,
+          "n": 3
+        },
+        "mtdb_random": {
+          "mean": 0.3666666666666667,
+          "std": 0.01527525231651948,
+          "ci95": 0.037948892971703146,
+          "n": 3
+        },
+        "mtdb_active_d1": {
+          "mean": 0.43,
+          "std": 0.045825756949558386,
+          "ci95": 0.1138466789151093,
+          "n": 3
+        },
+        "mtdb_active_d2": {
+          "mean": 0.35333333333333333,
+          "std": 0.035118845842842465,
+          "ci95": 0.08724709055957747,
+          "n": 3
+        },
+        "transformer_passive": {
+          "mean": 0.19333333333333333,
+          "std": 0.023094010767585035,
+          "ci95": 0.057373333333333346,
+          "n": 3
+        },
+        "transformer_active_d2": {
+          "mean": 0.38999999999999996,
+          "std": 0.07549834435270748,
+          "ci95": 0.18756342154055516,
+          "n": 3
+        },
+        "transformer_on_mtdb_active": {
+          "mean": 0.39333333333333337,
+          "std": 0.04509249752822895,
+          "ci95": 0.1120250145180878,
+          "n": 3
+        },
+        "bayes_active": {
+          "mean": 0.41,
+          "std": 0.04358898943540674,
+          "ci95": 0.10828979191656679,
+          "n": 3
+        },
+        "mtdb_active_d2_queries": {
+          "mean": 2.0,
+          "std": 0.0,
+          "ci95": 0.0,
+          "n": 3
+        }
+      },
+      "3": {
+        "mtdb_fixed": {
+          "mean": 0.39666666666666667,
+          "std": 0.023094010767585018,
+          "ci95": 0.057373333333333304,
+          "n": 3
+        },
+        "mtdb_random": {
+          "mean": 0.58,
+          "std": 0.026457513110645866,
+          "ci95": 0.06572941071798317,
+          "n": 3
+        },
+        "mtdb_active_d1": {
+          "mean": 0.6333333333333333,
+          "std": 0.051316014394468826,
+          "ci95": 0.12748633525902991,
+          "n": 3
+        },
+        "mtdb_active_d2": {
+          "mean": 0.5166666666666667,
+          "std": 0.051316014394468853,
+          "ci95": 0.12748633525902997,
+          "n": 3
+        },
+        "transformer_passive": {
+          "mean": 0.36999999999999994,
+          "std": 0.03605551275463987,
+          "ci95": 0.08957408795702765,
+          "n": 3
+        },
+        "transformer_active_d2": {
+          "mean": 0.44999999999999996,
+          "std": 0.04358898943540674,
+          "ci95": 0.10828979191656679,
+          "n": 3
+        },
+        "transformer_on_mtdb_active": {
+          "mean": 0.4833333333333334,
+          "std": 0.049328828623162485,
+          "ci95": 0.12254949372033783,
+          "n": 3
+        },
+        "bayes_active": {
+          "mean": 0.7333333333333334,
+          "std": 0.047258156262526066,
+          "ci95": 0.11740524325789047,
+          "n": 3
+        },
+        "mtdb_active_d2_queries": {
+          "mean": 3.0,
+          "std": 0.0,
+          "ci95": 0.0,
+          "n": 3
+        }
+      },
+      "4": {
+        "mtdb_fixed": {
+          "mean": 0.73,
+          "std": 0.07000000000000002,
+          "ci95": 0.17390367458260725,
+          "n": 3
+        },
+        "mtdb_random": {
+          "mean": 0.6233333333333334,
+          "std": 0.05507570547286107,
+          "ci95": 0.1368266794565707,
+          "n": 3
+        },
+        "mtdb_active_d1": {
+          "mean": 0.6699999999999999,
+          "std": 0.0529150262212918,
+          "ci95": 0.13145882143596652,
+          "n": 3
+        },
+        "mtdb_active_d2": {
+          "mean": 0.6833333333333335,
+          "std": 0.03511884584284243,
+          "ci95": 0.08724709055957738,
+          "n": 3
+        },
+        "transformer_passive": {
+          "mean": 0.6066666666666666,
+          "std": 0.03511884584284249,
+          "ci95": 0.08724709055957755,
+          "n": 3
+        },
+        "transformer_active_d2": {
+          "mean": 0.6233333333333334,
+          "std": 0.06350852961085883,
+          "ci95": 0.15777666666666668,
+          "n": 3
+        },
+        "transformer_on_mtdb_active": {
+          "mean": 0.5399999999999999,
+          "std": 0.06244997998398397,
+          "ci95": 0.15514687138321545,
+          "n": 3
+        },
+        "bayes_active": {
+          "mean": 0.7266666666666666,
+          "std": 0.02309401076758505,
+          "ci95": 0.05737333333333338,
+          "n": 3
+        },
+        "mtdb_active_d2_queries": {
+          "mean": 4.0,
+          "std": 0.0,
+          "ci95": 0.0,
+          "n": 3
+        }
+      },
+      "5": {
+        "mtdb_fixed": {
+          "mean": 0.7933333333333333,
+          "std": 0.025166114784235794,
+          "ci95": 0.0625211405135183,
+          "n": 3
+        },
+        "mtdb_random": {
+          "mean": 0.6900000000000001,
+          "std": 0.026457513110645866,
+          "ci95": 0.06572941071798317,
+          "n": 3
+        },
+        "mtdb_active_d1": {
+          "mean": 0.7766666666666667,
+          "std": 0.06658328118479392,
+          "ci95": 0.16541538948289478,
+          "n": 3
+        },
+        "mtdb_active_d2": {
+          "mean": 0.68,
+          "std": 0.08717797887081348,
+          "ci95": 0.21657958383313358,
+          "n": 3
+        },
+        "transformer_passive": {
+          "mean": 0.6033333333333334,
+          "std": 0.13051181300301262,
+          "ci95": 0.32423548368088556,
+          "n": 3
+        },
+        "transformer_active_d2": {
+          "mean": 0.65,
+          "std": 0.02645751311064593,
+          "ci95": 0.06572941071798333,
+          "n": 3
+        },
+        "transformer_on_mtdb_active": {
+          "mean": 0.57,
+          "std": 0.05567764362830021,
+          "ci95": 0.1383220974151756,
+          "n": 3
+        },
+        "bayes_active": {
+          "mean": 0.7799999999999999,
+          "std": 0.07937253933193773,
+          "ci95": 0.19718823215394984,
+          "n": 3
+        },
+        "mtdb_active_d2_queries": {
+          "mean": 5.0,
+          "std": 0.0,
+          "ci95": 0.0,
+          "n": 3
+        }
+      }
+    },
+    "drift": {
+      "6": {
+        "mtdb_static_noise": {
+          "mean": 0.67,
+          "std": 0.010000000000000009,
+          "ci95": 0.024843382083229622,
+          "n": 3
+        },
+        "mtdb_adaptive_noise": {
+          "mean": 0.35000000000000003,
+          "std": 0.06928203230275509,
+          "ci95": 0.17212,
+          "n": 3
+        },
+        "transformer_active": {
+          "mean": 0.6766666666666666,
+          "std": 0.06027713773341708,
+          "ci95": 0.14974879635947366,
+          "n": 3
+        },
+        "noise_mean_after": {
+          "mean": 0.4696390841353411,
+          "std": 0.006600617382542383,
+          "ci95": 0.016398165961970728,
+          "n": 3
+        }
+      },
+      "8": {
+        "mtdb_static_noise": {
+          "mean": 0.71,
+          "std": 0.062449979983983994,
+          "ci95": 0.15514687138321548,
+          "n": 3
+        },
+        "mtdb_adaptive_noise": {
+          "mean": 0.29000000000000004,
+          "std": 0.009999999999999981,
+          "ci95": 0.02484338208322955,
+          "n": 3
+        },
+        "transformer_active": {
+          "mean": 0.6033333333333334,
+          "std": 0.045092497528228935,
+          "ci95": 0.11202501451808776,
+          "n": 3
+        },
+        "noise_mean_after": {
+          "mean": 0.46915852358335525,
+          "std": 0.016066038641099623,
+          "ci95": 0.039913473652476876,
+          "n": 3
+        }
+      }
+    }
+  },
+  "total_time_s": 70.30592274665833,
+  "note": "Scoped synthetic benchmark. Active planning uses the same learned probe table for MTDB and the Transformer baseline; calibration is temperature scaling + split conformal. No universal superiority / AGI claim. See ACTIVE_INFERENCE.md."
+}

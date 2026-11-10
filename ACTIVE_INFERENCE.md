@@ -1,156 +1,171 @@
-# Active Inference — "thinking" beyond next-token prediction (v0.2)
+# Active Inference — "thinking" beyond next-token prediction (v0.3)
 
 > **Status: scoped research prototype. Not AGI, and not a universal claim that
-> "MTDB beats Transformers".** This document reports one explicitly defined
-> benchmark on which an active-inference loop improves sample efficiency over a
-> passive next-token-style classifier, and it states exactly where that advantage
-> comes from and where it does not.
+> "MTDB beats Transformers".** This document reports a controlled active-sensing
+> benchmark with fair baselines, multiple seeds, confidence intervals and
+> deliberately visible negative results.
 
-![active inference results](assets/active_inference.png)
+![active inference](assets/active_inference.png)
 
-## 1. The question
+## 1. What changed in v0.3
 
-The v0.1 base is a predictive substrate: it learns a multi-timescale world model
-and fits readouts, but it still behaves like a passive predictor. v0.2 adds a
-small, concrete "thinking" loop:
+Building on the v0.2 one-step expected-information-gain (EIG) planner:
 
-> At each decision step, the model **simulates the consequences of its own
-> questions**, scores candidate probes by expected posterior entropy (expected
-> free energy), and then acts by choosing the most informative probe.
-
-This is deliberately not "generate a longer chain-of-thought". It is model-based
-active inference in a controlled task where thinking has a measurable value:
-identifying a hidden class with as few probes as possible.
-
-## 2. Benchmark: active sensing with redundant tests
-
-The environment (`mtdb/active/sensing.py`) is an exactly specified 8-class task:
-
-- hidden class `c ∈ {0..7}`, encoded by 3 bits;
-- 8 binary probes; probe `q` returns `bit(c, q) ∈ {0,1}` corrupted by 10% noise;
-- the probe matrix contains redundant tests (`q0` and `q1` return the same bit);
-- 3 well-chosen probes identify the class, but a fixed/random probe order often
-  wastes its budget.
-
-At each tick the agent sees a query one-hot, the noisy outcome and the step index.
-An episode of budget `B` ends with an 8-way prediction.
-
-### Compared systems
-
-| System | Training | Decision rule |
+| Upgrade | Status | Finding |
 |---|---|---|
-| **MTDB active** | MTDB base + bootstrap-ridge class/outcome ensembles, trained on passively collected random-probe episodes | expected-free-energy planning over probes using the learned probe table and the class posterior from the MTDB interface |
-| **MTDB passive** | same model | fixed probe order `0,1,2,...` |
-| **Transformer passive** | parameter-matched causal Transformer (≈69.8k params) trained by backprop on the same passive episodes | fixed probe order; class logits at the last token |
-| **Transformer + MTDB probes** | same Transformer | evaluated on the *actively selected* probe sequences — isolates evidence acquisition from classifier capacity |
-| **Bayes active (oracle)** | known generative model, no learning | exact expected-information-gain planning |
+| Multi-step / particle planning (depth 2) | implemented | **negative on this task** — one-step EIG is better at budgets 2–5 |
+| Online probe-reliability adaptation under label-free drift | implemented | **negative** — naive posterior-weighted noise estimates saturate and hurt |
+| Temperature calibration + split conformal sets | implemented | **positive on calibration metrics**; ECE down, conformal coverage ≈ 0.90 |
+| Fair "Transformer + active policy" baseline | implemented | MTDB one-step active still ahead at budgets 2–5, but gap is modest |
+| Multi-seed (3) + 95% CIs | implemented | all tables/plots report mean ± 95% CI |
+| Real event-camera/audio/robot validation | **not done** | requires sensor data and an action loop; see §7 |
 
-All systems are trained on the same 600 random-probe episodes (8 probes each) and
-evaluated on the same 200 episodes per probe budget. MTDB has 69,216 parameters;
-the Transformer has 69,832.
+The important result is not "we beat Transformers"; it is that **active evidence
+acquisition, implemented on a learned world model, buys sample efficiency at
+small probe budgets**, and that this can be measured against fair baselines.
 
-## 3. Results
+## 2. Protocol
 
-| Probe budget | MTDB active | MTDB fixed | Transformer passive | Transformer + MTDB probes | Bayes active |
-|---:|---:|---:|---:|---:|---:|
-| 1 | 0.210 | 0.275 | 0.230 | 0.235 | 0.205 |
-| 2 | 0.390 | 0.200 | 0.195 | **0.430** | 0.435 |
-| 3 | **0.605** | 0.430 | 0.315 | 0.495 | 0.765 |
-| 4 | **0.750** | 0.680 | 0.525 | 0.700 | 0.725 |
-| 5 | **0.825** | 0.820 | 0.555 | 0.725 | 0.810 |
+- **Task**: 8 hidden classes encoded by 3 bits; 8 binary probes with 10% label
+  noise; two probes are redundant; 3 well-chosen probes identify the class.
+- **Training**: 600 random-probe episodes, 80/20 fit/calibration split; MTDB is
+  trained with local/ridge readouts (no backprop), the Transformer baseline with
+  backprop on exactly the same episodes.
+- **Evaluation**: 100 fresh episodes per budget, **3 seeds**, 95% CI
+  (t-distribution; 2 degrees of freedom).
+- **Models**: MTDB (69,216 params) vs causal Transformer (69,832 params).
+- **Shared planner**: both active-policy variants use the same probe table
+  learned from labelled training data and the same expected-free-energy planner;
+  only the class posterior differs.
+- **Budgets**: 2, 3, 4, 5 probes.
+- **Multi-step**: depth-2 particle planning with 12 particles and greedy
+  continuation.
+- **Calibration**: temperature scaling on held-out calibration episodes +
+  split-conformal prediction sets at α = 0.1.
 
-Reference chance = 0.125.
+## 3. Stationary results (mean ± 95% CI over 3 seeds)
 
-### What the numbers say
+| Budget | MTDB active d1 | MTDB active d2 | MTDB fixed | Transformer passive | Transformer + active d2 | Bayes oracle |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | **0.430 ± 0.114** | 0.353 ± 0.087 | 0.230 ± 0.114 | 0.193 ± 0.057 | 0.390 ± 0.188 | 0.410 ± 0.108 |
+| 3 | **0.633 ± 0.127** | 0.517 ± 0.127 | 0.397 ± 0.057 | 0.370 ± 0.090 | 0.450 ± 0.108 | 0.733 ± 0.117 |
+| 4 | 0.670 ± 0.131 | 0.683 ± 0.087 | **0.730 ± 0.174** | 0.607 ± 0.087 | 0.623 ± 0.158 | 0.727 ± 0.057 |
+| 5 | 0.777 ± 0.165 | 0.680 ± 0.217 | **0.793 ± 0.063** | 0.603 ± 0.324 | 0.650 ± 0.066 | 0.780 ± 0.197 |
 
-- **Active planning helps the same MTDB model**: at budgets 2–5, MTDB active is
-  substantially above MTDB with a fixed probe order (e.g. 3 probes: 0.605 vs
-  0.430; 4 probes: 0.750 vs 0.680).
-- **Against the passive next-token baseline**: MTDB active beats the fixed-probe
-  Transformer at every budget from 2 onward by a wide margin (e.g. 3 probes:
-  0.605 vs 0.315; 5 probes: 0.825 vs 0.555).
-- **Honest fairness check**: when the Transformer is given the *same actively
-  selected observations*, it improves a lot (0.495 / 0.700 / 0.725 at budgets
-  3/4/5). This shows that **most of the gain comes from active evidence
-  acquisition, not from the classifier alone**. MTDB active is still ahead at
-  budgets 3–5, but the Transformer is better at budget 2 (0.430 vs 0.390).
-- **Oracle gap**: exact Bayes active reaches 0.765 at 3 probes while MTDB active
-  reaches 0.605. The gap is dominated by the finite-data ridge class readout, not
-  by the planning rule. This is a concrete next research target.
-- At budget 1 there is no time to think; all methods are near chance. Active
-  inference is about *sequential* information gathering.
+Chance = 0.125.
 
-This is a **scoped result on a synthetic 8-class active-sensing task with one
-seed and 200 evaluation episodes**. It does not imply that MTDB is generally
-better than Transformers, and it is not evidence of AGI.
+### Reading the table
 
-## 4. What is actually new in the code
+- **At small budgets (2–3 probes), active EIG planning helps a lot** vs. the
+  same MTDB with fixed probes and vs. a passive Transformer: 0.633 vs 0.397 /
+  0.370 at 3 probes.
+- **At larger budgets (4–5), a fixed probe order catches up**: with enough
+  probes, redundancy no longer matters. Active inference is primarily a
+  *sample-efficiency* tool, not a free accuracy boost.
+- **Multi-step particle planning (d2) did not help** at 2–3 probes and was
+  roughly tied at 4; the one-step greedy planner is the better default here.
+  This is a negative result, not a hidden success.
+- **Fair baseline**: when the Transformer is given the *same active planner*
+  (d2) and the same learned probe table, it reaches 0.390 / 0.450 / 0.623 /
+  0.650. MTDB d1 is still ahead at every budget, but the gap is modest at 4–5
+  probes, so the evidence does not support a blanket architecture claim.
+- **Oracle gap**: exact Bayes active reaches 0.733 at 3 probes vs MTDB 0.633.
+  The remaining gap is dominated by the finite-data readout/uncertainty model.
 
-- `mtdb/active/sensing.py` — exact active-sensing environment + exact Bayesian
-  oracle.
+## 4. Calibration (mean over 3 seeds)
+
+| Metric | Before temperature scaling | After temperature + conformal |
+|---|---:|---:|
+| ECE (10 bins) | 0.548 | **0.503** |
+| NLL | 1.852 | **1.649** |
+| Conformal coverage (target 0.90) | — | **0.903** |
+| Average prediction-set size | — | 1.96 |
+
+Calibration improves NLL/ECE and conformal coverage is close to the nominal
+level, but **ECE remains high** (~0.5) because the linear ensemble itself is
+under-expressive/over-confident for some classes. This is a concrete headroom
+item: better last-layer uncertainty (e.g. Bayesian last layer, deep ensembles
+with diverse features, or nonlinear calibration) is needed before the gap to
+the Bayes oracle can be closed.
+
+## 5. Negative result: label-free online probe adaptation
+
+We added per-probe reliability updates: after each observation the agent updates
+`noise[q]` with the posterior-expected mismatch. Under a mid-episode drift where
+probes 0–3 become unreliable (noise 0.4 after step 3), the update **saturates all
+probe-noise estimates** and degrades planning:
+
+| Budget (drift at step 3) | Frozen reliability | Online adaptive noise | Transformer + active |
+|---:|---:|---:|---:|
+| 6 | **0.670** | 0.350 | 0.677 |
+| 8 | **0.710** | 0.290 | 0.603 |
+
+Diagnosis: the class posterior used to compute expected mismatches is itself the
+thing that degrades under drift, so the adaptation reinforces its own error and
+drives every probe to the noise cap. We keep this experiment in the repository
+because it is an honest boundary: **label-free probe adaptation is not solved**
+by posterior-weighted noise updates. Next step: semi-supervised adaptation
+(occasional labels / known probe semantics) or a separate probe-reliability
+model with its own excitation.
+
+![drift](assets/active_drift.png)
+
+## 6. What is actually in the code
+
+- `mtdb/active/planning.py` — belief-space one-step EIG and particle/multi-step
+  planning, probe-table inference.
 - `mtdb/active/agent.py` — `ActiveSensingAgent`:
-  - learns a class posterior (bootstrap ridge ensemble) from the MTDB interface;
-  - learns a probe→bit table and noise level from labelled training experience;
-  - performs one-step expected-free-energy lookahead over candidate probes;
-  - has a latent-rollout fallback through `MTDBSystem.snapshot_state()`.
-- `MTDBSystem.snapshot_state()` / `restore_state()` — cheap mental-rollout
-  snapshots including working-memory usage; used by deliberation and tested for
-  bit-exact restoration.
-- Optional **sensory evidence trace** (`include_sensory_trace=True`): a generic
-  decaying trace of the input stream included in `z(t)`. It is disabled by
-  default, so all v0.1 benchmark numbers remain unchanged.
-- `mtdb/baselines/transformer.py` — small causal Transformer baseline trained
-  with backprop, for a fair comparison.
-- `scripts/active_benchmark.py` — one-command reproduction (~8 s on CPU).
+  - class/outcome bootstrap-ridge ensembles (no backprop in the base/readouts);
+  - temperature scaling, split-conformal prediction sets, calibration report;
+  - depth-1/depth-2 planning, optional online probe-noise adaptation;
+  - optional sensory evidence trace through the MTDB interface.
+- `MTDBSystem.snapshot_state()` / `restore_state()` — mental-rollout snapshots
+  (including working-memory usage) with bit-exact restoration tests.
+- `mtdb/baselines/transformer.py` — parameter-matched causal Transformer baseline
+  with causal Transformer encoder, trained by backprop.
+- `scripts/active_benchmark.py` — 3-seed benchmark, calibration, drift, two plots.
+- `results/active_v03/results.json` — per-seed and aggregate data.
+- `results/active_v02/results.json` — v0.2 one-step benchmark for comparison.
 
-## 5. Reproduce
+## 7. Real event-camera / audio / robot validation (not done)
+
+This iteration does **not** claim real-sensor validation. The benchmark is
+synthetic and small. For real active perception, the missing pieces are:
+
+1. a feature front-end for DVS/audio/touch/proprioception;
+2. an environment/action loop where the agent's queries are real sensor
+   actions (gaze, touch, audio probe) rather than table labels;
+3. a probe-semantics model that is learned online, not supplied by a synthetic
+   test matrix.
+
+The existing [`mtdb/tasks/array.py`](mtdb/tasks/array.py) adapter can already
+ingest arbitrary `[N, T, F]` feature streams for the v0.1 prediction pipeline.
+The active-inference task needs an additional environment wrapper; no real-data
+numbers are reported until that exists.
+
+## 8. Reproduce
 
 ```bash
-python scripts/active_benchmark.py
-# writes results/active_v02/results.json (script writes artifacts/ by default;
-# the committed result is results/active_v02/results.json)
+python scripts/active_benchmark.py       # ~70 s CPU, 3 seeds
+python -m pytest tests -q                 # 35 tests
 ```
 
-The script prints:
+The script writes `artifacts/active_v03/results.json` by default and refreshes
+the two figures in `assets/`. The committed copy is
+[`results/active_v03/results.json`](results/active_v03/results.json).
 
-```text
-B=1 | MTDB-active 0.210 | MTDB-fixed 0.275 | Transformer-passive 0.230 | Transformer+active-probes 0.235 | Bayes 0.205
-B=2 | MTDB-active 0.390 | MTDB-fixed 0.200 | Transformer-passive 0.195 | Transformer+active-probes 0.430 | Bayes 0.435
-B=3 | MTDB-active 0.605 | MTDB-fixed 0.430 | Transformer-passive 0.315 | Transformer+active-probes 0.495 | Bayes 0.765
-B=4 | MTDB-active 0.750 | MTDB-fixed 0.680 | Transformer-passive 0.525 | Transformer+active-probes 0.700 | Bayes 0.725
-B=5 | MTDB-active 0.825 | MTDB-fixed 0.820 | Transformer-passive 0.555 | Transformer+active-probes 0.725 | Bayes 0.810
-```
+## 9. Honest takeaway
 
-## 6. Limitations and next steps
+- **Positive, scoped**: active EIG planning improves sample efficiency at small
+  probe budgets; calibration/conformal uncertainty works reasonably; a fair
+  Transformer + active-policy baseline is included and MTDB remains competitive
+  to slightly ahead.
+- **Negative, reported**: multi-step particle planning and label-free online
+  probe adaptation are not solved and hurt on this benchmark.
+- **Not claimed**: universal Transformer superiority, AGI, or real-sensor
+  validation. Any of those claims would require much stronger and broader
+  evidence than this synthetic task can provide.
 
-1. **Synthetic task**: 8 classes, 8 probes, 10% label noise. No real sensor data.
-2. **Only one seed** and 200 evaluation episodes; confidence intervals should be
-   added for a publication-grade claim.
-3. **The probe table is learned from labelled training episodes**, but the planner
-   currently assumes the probe semantics are stationary. Online adaptation of the
-   probe table is the obvious next step.
-4. **The class readout is a linear ensemble**, leaving a large gap to the exact
-   Bayes oracle (0.605 vs 0.765 at 3 probes). A richer local readout (kernel /
-   random-feature / small MLP head) is a natural improvement.
-5. **Planning is belief-space**; the latent-dynamics rollout path exists but is
-   not the default because the current class readout is miscalibrated under
-   imagined states.
-6. **No universal superiority claim**: on the same actively selected evidence, a
-   Transformer is competitive. The defensible claim is narrower — *active
-   evidence acquisition, which next-token predictors cannot do on their own, is
-   the main source of sample efficiency; MTDB provides one natively trainable
-   way to implement it.*
-7. **Not AGI**. This is a controlled primitive: sequential decision making under
-   uncertainty with a learned world model.
-
-## 7. If you want to push this further
-
-- replace the probe table with an online-learned experiment model;
-- add calibrated uncertainty (deep ensembles / conformal / Bayesian last layer);
-- plan multiple steps ahead with particle rollouts through `MTDBSystem`;
-- add active perception on real event-camera/audio streams;
-- compare against model-based RL baselines and Transformer policies trained with
-  the same probe-selection objective.
-
-The repository will keep both results (where MTDB active wins and where the
-Transformer catches up) visible in `results/active_v02/results.json`.
+The next useful experiments are: a **semi-supervised drift protocol** with
+occasional labels, a **Bayesian last layer** to shrink the oracle gap, **multi-step
+planning with a calibrated model**, and a real sensor/action loop.

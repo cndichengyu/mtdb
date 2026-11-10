@@ -8,7 +8,8 @@ rerunning training.
 |---|---|---|
 | `demo_standard/` | 2048 units, full pipeline | `python scripts/train.py --config configs/standard.yaml --run-name demo_standard` |
 | `demo_debug/` | 768 units, quick validation | `python scripts/train.py --config configs/debug.yaml --run-name demo_debug` |
-| `active_v02/` | 8-class active sensing, MTDB vs small Transformer | `python scripts/active_benchmark.py --out-dir results` |
+| `active_v02/` | v0.2 8-class active sensing, one-step EIG | archived result |
+| `active_v03/` | v0.3 active sensing: multi-step, calibration, drift, fair Transformer, 3 seeds | `python scripts/active_benchmark.py --out-dir results` |
 
 Each `results.json` contains:
 
@@ -20,5 +21,5 @@ Each `results.json` contains:
 
 Model checkpoints and per-run plot folders are **not** committed to keep the
 repository small; run the commands above to regenerate them. The figures shown
-in the README live in [`../assets/`](../assets/). The v0.2 active-inference
+in the README live in [`../assets/`](../assets/). The v0.3 active-inference
 protocol and analysis are in [`../ACTIVE_INFERENCE.md`](../ACTIVE_INFERENCE.md).

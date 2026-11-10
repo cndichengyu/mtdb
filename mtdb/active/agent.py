@@ -1,17 +1,16 @@
-"""Active-inference agent: mental rollouts + expected free energy.
+"""Active-inference agent with calibrated uncertainty and optional multi-step planning.
 
-The agent owns an MTDB base and two bootstrap-ridge readouts trained without
+The agent owns an MTDB base and bootstrap-ridge readouts trained without
 backpropagation:
 
-* a class readout  P(class | z)  (ensemble -> uncertainty);
-* an outcome readout P(outcome | z, query) for a candidate probe.
+* a class readout  P(class | z)  (ensemble; temperature-calibrated);
+* an outcome readout P(outcome | z, query);
+* a probe table learned from labelled training experience.
 
-At every decision step it performs a **mental rollout** for each candidate
-query: both possible outcomes are hallucinated at the MTDB level, the resulting
-latent states are scored by expected class entropy (expected free energy), and
-the query with the lowest score is executed. This is the concrete difference
-from next-token prediction: the model simulates consequences of its own
-questions before acting.
+At each decision step it plans in belief space. Depth-1 planning is exact
+expected information gain; depth>1 uses particle rollouts and a greedy
+continuation policy. The agent also supports online per-probe reliability
+updates (for non-stationary noise) and conformal prediction sets.
 """
 
 from __future__ import annotations
@@ -24,6 +23,7 @@ import torch
 from ..config import ExperimentConfig
 from ..core.system import MTDBSystem
 from ..training.readout import RidgeReadout
+from . import planning
 from .sensing import ActiveSensingEnv, SensingEpisode
 
 
@@ -54,9 +54,17 @@ class BootstrapRidgeEnsemble:
         return self
 
     @torch.no_grad()
-    def proba(self, x: torch.Tensor) -> torch.Tensor:
-        logits = torch.stack([m.predict(x.unsqueeze(0))[0] for m in self.members])
-        return torch.softmax(logits.mean(dim=0), dim=-1)
+    def logits(self, x: torch.Tensor) -> torch.Tensor:
+        if not self.members:
+            return torch.zeros(x.shape[0] if x.dim() > 1 else 1, 0) if x.dim() > 1 else torch.zeros(0)
+        return torch.stack([m.predict(x.unsqueeze(0))[0] for m in self.members]).mean(dim=0)
+
+    @torch.no_grad()
+    def proba(self, x: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
+        logits = self.logits(x)
+        if logits.numel() == 0:
+            return torch.ones(8) / 8
+        return torch.softmax(logits / max(float(temperature), 1e-3), dim=-1)
 
     def state_dict(self) -> List[Dict[str, torch.Tensor]]:
         return [m.state_dict() for m in self.members]
@@ -101,6 +109,13 @@ class ActiveSensingAgent:
         self.outcomes: List[float] = []
         self.code_hat: Optional[torch.Tensor] = None
         self.noise_hat: float = 0.1
+        self.noise_per_query: Optional[np.ndarray] = None
+        self.temperature: float = 1.0
+        self.noise_update_rate: float = 0.2
+        self.noise_cap: float = 0.49
+        self.conformal_q: Optional[float] = None
+        self.planning_rng = np.random.default_rng(seed + 99)
+        self._trace_slice = self.system.spec.slices().get("trace")
 
     # ------------------------------------------------------------------ reset
     def reset(self) -> None:
@@ -121,9 +136,6 @@ class ActiveSensingAgent:
     @torch.no_grad()
     def fit(self, episodes: Sequence[SensingEpisode], passes: int = 3) -> "ActiveSensingAgent":
         """Fit the class/outcome ensembles on passively collected episodes."""
-        code_counts = torch.zeros(
-            self.env.n_classes, self.env.n_queries, 2, dtype=torch.float64
-        )
         for _pass in range(passes):
             class_X: List[torch.Tensor] = []
             class_Y: List[torch.Tensor] = []
@@ -139,9 +151,8 @@ class ActiveSensingAgent:
                     qoh[q] = 1.0
                     out_X.append(torch.cat([z_prev, qoh]))
                     out_Y.append(torch.tensor([(1.0 - o) / 2.0, (1.0 + o) / 2.0]))
-                    code_counts[ep.label, q, 0 if o < 0 else 1] += 1.0
                     z = self.observe(q, o, t, len(ep.features))
-                    class_X.append(z)
+                    class_X.append(self._class_features(z))
                     class_Y.append(
                         torch.nn.functional.one_hot(
                             torch.tensor(ep.label), self.env.n_classes
@@ -150,23 +161,47 @@ class ActiveSensingAgent:
                     z_prev = z
             self.class_ensemble.fit(torch.stack(class_X), torch.stack(class_Y))
             self.outcome_ensemble.fit(torch.stack(out_X), torch.stack(out_Y))
-        # learn the probe->bit table and noise rate from labelled training data
-        self.code_hat = (code_counts[:, :, 1] >= code_counts[:, :, 0]).long()
-        disagreements = []
-        for ep in episodes:
-            for q, o in zip(ep.queries, ep.outcomes):
-                bit = int(self.code_hat[ep.label, int(q)])
-                disagreements.append(int((o > 0) != bool(bit)))
-        self.noise_hat = float(np.mean(disagreements)) if disagreements else 0.1
+
+        labels = [ep.label for ep in episodes for _ in range(len(ep.queries))]
+        queries = [int(q) for ep in episodes for q in ep.queries]
+        outcomes = [float(o) for ep in episodes for o in ep.outcomes]
+        code, noise = planning.infer_code_and_noise(
+            labels, queries, outcomes, self.env.n_classes, self.env.n_queries
+        )
+        self.code_hat = torch.as_tensor(code, dtype=torch.long)
+        # planning starts from a common reliability prior; per-probe deviations
+        # are learned online only when the environment drifts. This avoids
+        # overfitting tiny per-probe noise estimates at the very first steps.
+        self.noise_hat = float(np.mean(noise))
+        self.noise_per_query = np.full(
+            self.env.n_queries, self.noise_hat, dtype=np.float64
+        )
+        self.noise_per_query_est = noise.copy()
         return self
 
     # --------------------------------------------------------------- predict
+    def _class_features(self, z: torch.Tensor) -> torch.Tensor:
+        # the optional sensory evidence trace is the cheapest sufficient
+        # statistic for evidence accumulation in this task; using it keeps the
+        # readout small and well-conditioned
+        if self._trace_slice is not None:
+            return z[self._trace_slice]
+        return z
+
     @torch.no_grad()
-    def class_probs(self, z: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def class_logits(self, z: Optional[torch.Tensor] = None) -> torch.Tensor:
         z = self._z if z is None else z
         if not self.class_ensemble.members:
-            return torch.ones(self.env.n_classes) / self.env.n_classes
-        return self.class_ensemble.proba(z)
+            return torch.zeros(self.env.n_classes)
+        return self.class_ensemble.logits(self._class_features(z))
+
+    @torch.no_grad()
+    def class_probs(self, z: Optional[torch.Tensor] = None) -> torch.Tensor:
+        return self._probs_from_logits(self.class_logits(z))
+
+    @torch.no_grad()
+    def _probs_from_logits(self, logits: torch.Tensor) -> torch.Tensor:
+        return torch.softmax(logits / max(self.temperature, 1e-3), dim=-1)
 
     @torch.no_grad()
     def outcome_probs(self, z: torch.Tensor, query: int) -> Tuple[float, float]:
@@ -178,17 +213,7 @@ class ActiveSensingAgent:
         return float(p[0]), float(p[1])
 
     @torch.no_grad()
-    def predict_episode(self, episode: SensingEpisode) -> int:
-        self.reset()
-        z = None
-        for t, feat in enumerate(episode.features):
-            out = self.system.step(
-                torch.tensor(feat), learn=False, allow_memory_write=False
-            )
-            z = out.packet.z
-        return int(self.class_probs(z).argmax().item())
-
-    def predict_proba_episode(self, episode: SensingEpisode) -> np.ndarray:
+    def _final_logits(self, episode: SensingEpisode) -> torch.Tensor:
         self.reset()
         z = None
         for feat in episode.features:
@@ -196,44 +221,152 @@ class ActiveSensingAgent:
                 torch.tensor(feat), learn=False, allow_memory_write=False
             )
             z = out.packet.z
-        return self.class_probs(z).numpy()
+        return self.class_logits(z)
+
+    @torch.no_grad()
+    def predict_episode(self, episode: SensingEpisode) -> int:
+        return int(self._probs_from_logits(self._final_logits(episode)).argmax().item())
+
+    def predict_proba_episode(self, episode: SensingEpisode) -> np.ndarray:
+        return self._probs_from_logits(self._final_logits(episode)).numpy()
+
+    # ----------------------------------------------------------- calibration
+    @torch.no_grad()
+    def calibrate(self, episodes: Sequence[SensingEpisode]) -> float:
+        """Temperature scaling on a held-out calibration split."""
+        logits, labels = [], []
+        for ep in episodes:
+            logits.append(self._final_logits(ep))
+            labels.append(ep.label)
+        if not logits:
+            return self.temperature
+        logits_t = torch.stack(logits)
+        labels_t = torch.tensor(labels, dtype=torch.long)
+        best_t, best_nll = 1.0, float("inf")
+        for temperature in (0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 4.0):
+            log_probs = torch.log_softmax(logits_t / temperature, dim=-1)
+            nll = float(-log_probs[torch.arange(len(labels_t)), labels_t].mean())
+            if nll < best_nll:
+                best_nll, best_t = nll, float(temperature)
+        self.temperature = best_t
+        return best_t
+
+    def conformal_calibrate(
+        self, episodes: Sequence[SensingEpisode], alpha: float = 0.1
+    ) -> float:
+        """Split-conformal threshold for class prediction sets."""
+        scores = []
+        for ep in episodes:
+            probs = self._probs_from_logits(self._final_logits(ep))
+            scores.append(float(1.0 - probs[ep.label]))
+        n = len(scores)
+        if n == 0:
+            return 0.0
+        level = min(1.0, np.ceil((n + 1) * (1.0 - alpha)) / n)
+        self.conformal_q = float(np.quantile(scores, level))
+        return self.conformal_q
+
+    def prediction_set(self, episode: SensingEpisode) -> List[int]:
+        if self.conformal_q is None:
+            return [self.predict_episode(episode)]
+        probs = self._probs_from_logits(self._final_logits(episode)).numpy()
+        selected = np.flatnonzero(probs >= 1.0 - self.conformal_q).tolist()
+        if not selected:
+            selected = [int(np.argmax(probs))]
+        return selected
+
+    def calibration_report(
+        self, episodes: Sequence[SensingEpisode], n_bins: int = 10
+    ) -> Dict[str, float]:
+        """NLL / ECE / conformal coverage+size without using labels for planning."""
+        probs, labels = [], []
+        for ep in episodes:
+            probs.append(self._probs_from_logits(self._final_logits(ep)).numpy())
+            labels.append(ep.label)
+        if not probs:
+            return {}
+        probs = np.stack(probs)
+        labels = np.asarray(labels)
+        n = len(labels)
+        nll = float(-np.mean(np.log(probs[np.arange(n), labels] + 1e-12)))
+        conf = probs.max(axis=1)
+        pred = probs.argmax(axis=1)
+        ece = 0.0
+        for lo in np.linspace(0.0, 1.0, n_bins + 1)[:-1]:
+            hi = lo + 1.0 / n_bins
+            mask = (conf > lo) & (conf <= hi)
+            if mask.sum():
+                acc = float((pred[mask] == labels[mask]).mean())
+                ece += float(mask.mean()) * abs(acc - float(conf[mask].mean()))
+        report = {
+            "nll": nll,
+            "ece": float(ece),
+            "accuracy": float((pred == labels).mean()),
+            "temperature": float(self.temperature),
+        }
+        if self.conformal_q is not None:
+            sizes, covered = [], []
+            for ep in episodes:
+                p = self._probs_from_logits(self._final_logits(ep)).numpy()
+                selected = np.flatnonzero(p >= 1.0 - self.conformal_q).tolist()
+                if not selected:
+                    selected = [int(np.argmax(p))]
+                sizes.append(len(selected))
+                covered.append(int(ep.label in selected))
+            report["coverage"] = float(np.mean(covered))
+            report["avg_set_size"] = float(np.mean(sizes))
+        return report
+
+    # ---------------------------------------------------------- online noise
+    def reset_noise(self, prior: Optional[np.ndarray] = None) -> None:
+        if self.noise_per_query is None:
+            return
+        if prior is None:
+            self.noise_per_query = np.full(
+                self.env.n_queries, float(self.noise_hat), dtype=np.float64
+            )
+        else:
+            self.noise_per_query = np.asarray(prior, dtype=np.float64).copy()
+
+    def update_noise(self, query: int, outcome: float, prior: np.ndarray) -> None:
+        """Posterior-weighted online update of one probe's reliability."""
+        if self.code_hat is None or self.noise_per_query is None:
+            return
+        bit = self.code_hat[:, query].numpy()
+        observed = 1 if outcome > 0 else 0
+        mismatch = float((prior * (bit != observed)).sum())
+        rate = float(self.noise_update_rate)
+        self.noise_per_query[query] = float(
+            np.clip(
+                (1.0 - rate) * self.noise_per_query[query] + rate * mismatch,
+                0.01,
+                float(self.noise_cap),
+            )
+        )
 
     # ---------------------------------------------------------------- planning
-    @torch.no_grad()
-    def choose_query(self, step: int, horizon: int) -> int:
-        """Expected-free-energy lookahead over candidate probes.
-
-        The posterior over classes comes from the MTDB interface (learned by
-        local ridge readouts). The agent simulates the two possible outcomes of
-        each candidate probe in *belief space* using the probe table learned
-        from labelled training experience, and picks the probe with the lowest
-        expected posterior entropy. If no probe table is available it falls
-        back to latent rollouts through the MTDB dynamics.
-        """
-        class_probs = self.class_probs().detach().cpu().double()
-        best_query, best_score = 0, float("inf")
-        if self.code_hat is not None:
-            for query in range(self.env.n_queries):
-                expected_entropy = 0.0
-                for sign in (0, 1):
-                    bit = self.code_hat[:, query]
-                    likelihood = self.noise_hat + (1.0 - 2.0 * self.noise_hat) * (
-                        bit == sign
-                    ).double()
-                    p_outcome = float((class_probs * likelihood).sum())
-                    if p_outcome <= 1e-9:
-                        continue
-                    post = class_probs * likelihood
-                    post = post / post.sum().clamp_min(1e-12)
-                    expected_entropy += p_outcome * float(
-                        -(post * torch.log(post + 1e-12)).sum()
-                    )
-                if expected_entropy < best_score:
-                    best_score, best_query = expected_entropy, query
-            return best_query
+    def choose_query(
+        self,
+        step: int,
+        horizon: int,
+        depth: int = 1,
+        n_particles: int = 64,
+        rng: Optional[np.random.Generator] = None,
+    ) -> int:
+        """Plan the next probe in belief space."""
+        if self.code_hat is not None and self.noise_per_query is not None:
+            return planning.plan_query(
+                self.class_probs().detach().numpy(),
+                self.code_hat.numpy(),
+                self.noise_per_query,
+                depth=depth,
+                n_particles=n_particles,
+                rng=rng or self.planning_rng,
+            )
 
         # fallback: latent rollout with the learned outcome readout
         z = self._z
+        best_query, best_score = 0, float("inf")
         for query in range(self.env.n_queries):
             p_neg, p_pos = self.outcome_probs(z, query)
             expected_entropy = 0.0
@@ -242,9 +375,7 @@ class ActiveSensingAgent:
                     continue
                 snap = self.system.snapshot_state(light=True)
                 feat = torch.tensor(self.env.feature(query, outcome, step, horizon))
-                out = self.system.step(
-                    feat, learn=False, allow_memory_write=False
-                )
+                out = self.system.step(feat, learn=False, allow_memory_write=False)
                 probs = self.class_probs(out.packet.z)
                 entropy = float(-(probs * torch.log(probs + 1e-9)).sum())
                 self.system.restore_state(snap)
@@ -253,7 +384,14 @@ class ActiveSensingAgent:
                 best_score, best_query = expected_entropy, query
         return best_query
 
-    def plan_episode(self, rng: np.random.Generator, horizon: int) -> SensingEpisode:
+    def plan_episode(
+        self,
+        rng: np.random.Generator,
+        horizon: int,
+        depth: int = 1,
+        n_particles: int = 64,
+        adaptive_noise: bool = False,
+    ) -> SensingEpisode:
         """Run the active policy in the environment and return the episode."""
         self.reset()
         label = int(rng.integers(0, self.env.n_classes))
@@ -261,8 +399,13 @@ class ActiveSensingAgent:
         outcomes: List[float] = []
         feats: List[np.ndarray] = []
         for t in range(horizon):
-            query = self.choose_query(t, horizon)
-            outcome = self.env.observe(label, query, rng)
+            prior = self.class_probs().detach().numpy()
+            query = self.choose_query(
+                t, horizon, depth=depth, n_particles=n_particles, rng=rng
+            )
+            outcome = self.env.observe(label, query, rng, step=t)
+            if adaptive_noise:
+                self.update_noise(query, outcome, prior)
             feat = self.env.feature(query, outcome, t, horizon)
             feats.append(feat)
             self.observe(query, outcome, t, horizon)

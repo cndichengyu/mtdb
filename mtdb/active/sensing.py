@@ -44,6 +44,10 @@ class ActiveSensingEnv:
         self.n_classes = int(n_classes)
         self.n_queries = int(n_queries)
         self.noise = float(noise)
+        self.query_noise = np.full(self.n_queries, self.noise, dtype=np.float64)
+        self.drift_step: Optional[int] = None
+        self.drift_queries = set()
+        self.drift_noise = 0.4
         self.train_horizon = int(train_horizon)
         self.feature_dim = 2 * self.n_queries + 2
         self.code = self._default_code() if code is None else np.asarray(code, dtype=np.int64)
@@ -67,9 +71,40 @@ class ActiveSensingEnv:
         f[2 * self.n_queries + 1] = step / max(1, horizon - 1)
         return f
 
-    def observe(self, label: int, query: int, rng: np.random.Generator) -> float:
+    def configure_drift(
+        self,
+        switch_step: int,
+        drift_queries: Sequence[int],
+        drift_noise: float = 0.4,
+    ) -> None:
+        """Make selected probes unreliable after ``switch_step`` ticks."""
+        self.drift_step = int(switch_step)
+        self.drift_queries = set(int(q) for q in drift_queries)
+        self.drift_noise = float(drift_noise)
+
+    def clear_drift(self) -> None:
+        self.drift_step = None
+        self.drift_queries = set()
+
+    def noise_for(self, query: int, step: Optional[int] = None) -> float:
+        if (
+            self.drift_step is not None
+            and step is not None
+            and step >= self.drift_step
+            and int(query) in self.drift_queries
+        ):
+            return self.drift_noise
+        return float(self.query_noise[int(query)])
+
+    def observe(
+        self,
+        label: int,
+        query: int,
+        rng: np.random.Generator,
+        step: Optional[int] = None,
+    ) -> float:
         bit = int(self.code[label, query])
-        if rng.random() < self.noise:
+        if rng.random() < self.noise_for(query, step):
             bit = 1 - bit
         return 1.0 if bit else -1.0
 
@@ -78,7 +113,10 @@ class ActiveSensingEnv:
         T = int(horizon or self.train_horizon)
         label = int(rng.integers(0, self.n_classes))
         queries = rng.integers(0, self.n_queries, size=T).astype(np.int64)
-        outcomes = np.asarray([self.observe(label, int(q), rng) for q in queries], dtype=np.float32)
+        outcomes = np.asarray(
+            [self.observe(label, int(q), rng, step=t) for t, q in enumerate(queries)],
+            dtype=np.float32,
+        )
         feats = np.stack(
             [self.feature(int(q), float(o), t, T) for t, (q, o) in enumerate(zip(queries, outcomes))]
         )
@@ -90,7 +128,10 @@ class ActiveSensingEnv:
         T = int(horizon)
         label = int(rng.integers(0, self.n_classes))
         queries = np.asarray([(offset + t) % self.n_queries for t in range(T)], dtype=np.int64)
-        outcomes = np.asarray([self.observe(label, int(q), rng) for q in queries], dtype=np.float32)
+        outcomes = np.asarray(
+            [self.observe(label, int(q), rng, step=t) for t, q in enumerate(queries)],
+            dtype=np.float32,
+        )
         feats = np.stack(
             [self.feature(int(q), float(o), t, T) for t, (q, o) in enumerate(zip(queries, outcomes))]
         )
@@ -129,7 +170,7 @@ class ActiveSensingEnv:
         queries, outcomes = [], []
         for t in range(T):
             q = self.bayes_choice(history)
-            o = self.observe(label, q, rng)
+            o = self.observe(label, q, rng, step=t)
             history.append((q, o))
             queries.append(q)
             outcomes.append(o)

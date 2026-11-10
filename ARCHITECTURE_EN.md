@@ -10,7 +10,7 @@
 > limitations of each module. It is aimed at engineers who want to continue training or
 > modify the architecture on this foundation.
 
-> **New in v0.2**: enabling `include_sensory_trace=True` adds a decaying sensory-evidence trace to the interface; `mtdb/active/` provides active inference (expected-free-energy probe selection) and an active-sensing benchmark. See [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md).
+> **New in v0.2/v0.3**: enabling `include_sensory_trace=True` adds a decaying sensory-evidence trace to the interface; `mtdb/active/` provides active inference (one-step EIG, multi-step particle planning), calibration and an active-sensing benchmark. See [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md).
 
 ---
 

@@ -10,7 +10,7 @@
 ```
 
 
-> v0.2 主动推理基准（MTDB 主动 vs Transformer 基线）见 [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md)。
+> v0.3 主动推理基准（MTDB 主动 vs Transformer 基线）见 [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md)。
 
 ---
 

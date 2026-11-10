@@ -6,7 +6,7 @@
 > 本文件说明概念架构如何落到本仓库的代码里：每个模块的公式、实现位置、接口、
 > 训练协议、复杂度与局限。面向的读者是想在此基础上继续训练/改架构的工程师。
 
-> **v0.2 新增**：`include_sensory_trace=True` 时接口会多一条感觉证据 trace；`mtdb/active/` 提供主动推理（expected free energy 探针选择）与主动感知基准，详见 [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md)。
+> **v0.2/v0.3 新增**：`include_sensory_trace=True` 时接口会多一条感觉证据 trace；`mtdb/active/` 提供主动推理（one-step EIG / 多步粒子规划）、校准与主动感知基准，详见 [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md)。
 
 ---
 

@@ -12,7 +12,7 @@ with the command:
 ```
 
 
-> The v0.2 active-inference benchmark (MTDB active vs Transformer baselines) is in [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md).
+> The v0.3 active-inference benchmark (multi-seed, calibration, fair Transformer baseline) is in [ACTIVE_INFERENCE.md](ACTIVE_INFERENCE.md).
 
 ---
 

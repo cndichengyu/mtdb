@@ -8,5 +8,5 @@ and a compressed interface protocol for upper-layer world models.
 
 from .config import ExperimentConfig
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = ["ExperimentConfig", "__version__"]
