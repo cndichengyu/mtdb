@@ -91,7 +91,7 @@ python scripts/active_benchmark.py
 | 读出 | [`mtdb/training/readout.py`](mtdb/training/readout.py) | 闭式 ridge / 在线 RLS（贝叶斯 precision 初始化），**无 backprop** |
 | 训练管线 | [`mtdb/training/trainer.py`](mtdb/training/trainer.py) | 三阶段训练 + 遗忘压力测试 + 消融 + 延迟回忆 |
 | 自定义数据 | [`mtdb/tasks/array.py`](mtdb/tasks/array.py) | 把自己的 `[N,T,F]` 特征流转成训练序列 |
-| 主动推理（v0.2） | [`mtdb/active/`](mtdb/active/) | 期望自由能探针规划、mental rollout 快照、主动感知基准 |
+| 主动推理（v0.2） | [`mtdb/active/`](mtdb/active/) | 期望自由能探针规划、belief-space 结果模拟（+ latent rollout 回退）、主动感知基准 |
 | Transformer 基线 | [`mtdb/baselines/transformer.py`](mtdb/baselines/transformer.py) | 仅用于主动感知公平对比的小型 causal Transformer |
 | 合成世界 | [`mtdb/tasks/synthetic.py`](mtdb/tasks/synthetic.py) | 多模态预测/异常、延迟回忆任务 |
 

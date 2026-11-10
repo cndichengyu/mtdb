@@ -106,7 +106,7 @@ python scripts/active_benchmark.py
 | **Readouts** | [`mtdb/training/readout.py`](mtdb/training/readout.py) | Closed-form ridge and online RLS with Bayesian precision init — **no backprop** |
 | **Training pipeline** | [`mtdb/training/trainer.py`](mtdb/training/trainer.py) | 3-stage training + forgetting stress test + ablations + delayed recall |
 | **Custom data** | [`mtdb/tasks/array.py`](mtdb/tasks/array.py) | Convert your own `[N, T, F]` feature streams into trainer-ready sequences |
-| **Active inference (v0.2)** | [`mtdb/active/`](mtdb/active/) | Expected-free-energy planning over probes; mental-rollout snapshot/restore; active-sensing benchmark |
+| **Active inference (v0.2)** | [`mtdb/active/`](mtdb/active/) | Expected-free-energy planning over probes; belief-space consequence simulation (+ latent-rollout fallback); active-sensing benchmark |
 | **Transformer baseline** | [`mtdb/baselines/transformer.py`](mtdb/baselines/transformer.py) | Small causal Transformer used only for fair active-sensing comparisons |
 | **Synthetic worlds** | [`mtdb/tasks/synthetic.py`](mtdb/tasks/synthetic.py) | Multimodal prediction/anomaly world and delayed-recall world |
 
